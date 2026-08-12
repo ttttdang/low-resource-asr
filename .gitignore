@@ -1,0 +1,16 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Downloaded corpora and preprocessing outputs
+data/
+processed_audio/
+manifests/
+
+# Run outputs
+logs/
+checkpoints/
+results/
+wandb/

@@ -1,0 +1,59 @@
+# Spanish source adapter.
+
+run_name      : method2_es_source_adapter
+description   : "Method 2 source stage: Pfeiffer reduction-factor-4 Spanish adapter trained on Common Voice + FLEURS es_419. Output feeds the method 3 stack."
+seed          : 42
+log_dir       : ./logs/method2_es_source_adapter
+checkpoint_dir: ./checkpoints/method2_es_source_adapter
+results_dir   : ./results
+resume_from   : null
+
+norm_condition:
+  train: basic
+  eval:  full
+
+data:
+  languages      : [es_419]
+  train_manifest : ./manifests/es_419/train.csv
+  val_manifest   : ./manifests/es_419/validation.csv
+  train_datasets : [common_voice_25, fleurs]
+  val_datasets   : [common_voice_25, fleurs]
+  test_manifests :                                  # both keys point at the SAME combined
+    common_voice_25: ./manifests/es_419/test.csv    # test.csv; filter_datasets=[key] splits
+    fleurs         : ./manifests/es_419/test.csv
+  max_duration_sec: 30.0
+  min_duration_sec: 0.5
+  num_workers     : 4
+
+model:
+  name           : openai/whisper-medium
+  language       : spanish          # native <|es|> token
+  task           : transcribe
+  dropout        : 0.1
+  freeze_strategy: adapter
+  adapter:
+    name             : es           # referenced by method3's `sources` block
+    reduction_factor : 4
+    non_linearity    : "relu"
+    dropout          : 0.05
+    init_weights     : "mam_adapter"   # required for Pfeiffer bottleneck adapters
+
+training:
+  epochs              : 8
+  batch_size          : 32
+  grad_accum_steps    : 1           # effective batch = 32
+  lr                  : 3.0e-4
+  weight_decay        : 0.01
+  warmup_steps        : 500
+  max_grad_norm       : 1.0
+  mixed_precision     : "bf16"      # "no" | "fp16" | "bf16"
+  checkpoint_metric   : wer
+  early_stop_patience : 2
+
+generation:
+  num_beams      : 1
+  max_new_tokens : 440
+  batch_size     : 32
+  # no_repeat_ngram_size is deliberately absent -> code default 0. Enable it (e.g. 3)
+  # only for languages that show decoder looping, never for byte-fallback scripts,
+  # and never mix ngram settings within a single results table.

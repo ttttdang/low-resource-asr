@@ -1,0 +1,46 @@
+run_name      : fullft_ast_medium_fleurs
+description   : "Asturian full fine-tune of Whisper-medium on FLEURS ast_es, decoded through the <|es|> language token."
+seed          : 42
+log_dir       : ./logs/fullft_ast_medium_fleurs
+checkpoint_dir: ./checkpoints/fullft_ast_medium_fleurs
+results_dir   : ./results
+resume_from   : null
+
+norm_condition:
+  train: basic
+  eval:  full
+
+data:
+  languages      : [ast_es]
+  train_manifest : ./manifests/ast_es/train.csv
+  val_manifest   : ./manifests/ast_es/validation.csv
+  train_datasets : [fleurs]
+  val_datasets   : [fleurs]
+  test_manifests :
+    fleurs       : ./manifests/ast_es/test.csv
+  max_duration_sec: 30.0
+  min_duration_sec: 0.5
+  num_workers     : 4
+
+model:
+  name           : openai/whisper-medium
+  language       : spanish          # Whisper has no <|ast|> token; <|es|> is used as a proxy
+  task           : transcribe
+  dropout        : 0.1
+  freeze_strategy: none             # full fine-tune
+
+training:
+  epochs              : 20
+  batch_size          : 16
+  grad_accum_steps    : 2           # effective batch = 32
+  lr                  : 1.0e-5
+  weight_decay        : 0.01
+  warmup_steps        : 80          # 5% warmup
+  max_grad_norm       : 1.0
+  mixed_precision     : "bf16"      # "no" | "fp16" | "bf16"
+  early_stop_patience : 3           # mitigate overfitting for small dataset
+
+generation:
+  num_beams      : 1
+  max_new_tokens : 440
+  batch_size     : 16
